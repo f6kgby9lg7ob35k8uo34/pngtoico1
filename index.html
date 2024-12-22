@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PNG to ICO Converter</title>
+  <title>PNG to HD ICO Converter</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -25,7 +25,7 @@
   </style>
 </head>
 <body>
-  <h1>PNG to ICO Converter</h1>
+  <h1>PNG to HD ICO Converter</h1>
   <input type="file" id="fileInput" accept=".png" />
   <br />
   <button id="convertButton">Convert to ICO</button>
@@ -46,20 +46,36 @@
       reader.onload = function (event) {
         const img = new Image();
         img.onload = function () {
-          const canvas = document.createElement("canvas");
-          canvas.width = 64; // ICO standard size, can be adjusted (16x16, 32x32, etc.)
-          canvas.height = 64;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const sizes = [16, 32, 64, 128, 256]; // Multiple resolutions for HD ICO
+          const promises = sizes.map((size) => {
+            const canvas = document.createElement("canvas");
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-          // Convert to ICO
-          canvas.toBlob((blob) => {
+            return new Promise((resolve) => {
+              canvas.toBlob(
+                (blob) => resolve({ size, blob }),
+                "image/png"
+              );
+            });
+          });
+
+          Promise.all(promises).then((images) => {
+            // Create ICO file as a blob
+            const icoArray = new Uint8Array();
+            const icoBlob = new Blob(
+              images.map((image) => image.blob),
+              { type: "image/x-icon" }
+            );
+
             const link = document.getElementById("downloadLink");
-            link.href = URL.createObjectURL(blob);
+            link.href = URL.createObjectURL(icoBlob);
             link.download = "icon.ico";
             link.style.display = "block";
-            link.textContent = "Download ICO File";
-          }, "image/x-icon");
+            link.textContent = "Download HD ICO File";
+          });
         };
         img.src = event.target.result;
       };
